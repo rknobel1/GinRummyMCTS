@@ -414,10 +414,13 @@ class MonteCarlo(object):
 
         # Choose greedily to improve hand
         if move == None: 
-            percent_wins, move = max(
-                (calculate_deadwood_points(state[player-1][0], state[player-1][1]) - calculate_deadwood_points(S[player-1][0], S[player-1][1]), p)
-                for p, S in moves_states
-            )
+            if random.random() < 0.7:
+                percent_wins, move = max(
+                    (calculate_deadwood_points(state[player-1][0], state[player-1][1]) - calculate_deadwood_points(S[player-1][0], S[player-1][1]), p)
+                    for p, S in moves_states
+                )
+            else: 
+                move, state = random.choice(moves_states)
 
         # Display the stats for each possible play.
         for x in sorted(
@@ -457,9 +460,9 @@ class MonteCarlo(object):
                 value, move, state = max(
                     ( ((wins[stringify(player, S)] / plays[stringify(player, S)]) +
                      self.C * sqrt(log_total / plays[stringify(player, S)]), p, S)
-                    for p, S in moves_states 
-                    if ((wins[stringify(player, S)] / plays[stringify(player, S)]) +
-                     self.C * sqrt(log_total / plays[stringify(player, S)]), p, S) > self.threshold), default=(None, None)
+                    for p, S in moves_states )
+                    # if ((wins[stringify(player, S)] / plays[stringify(player, S)]) +
+                    #  self.C * sqrt(log_total / plays[stringify(player, S)]), p, S) > self.threshold), default=(None, None)
                 )
             else:
                 # Otherwise, just make an arbitrary decision.
@@ -501,7 +504,7 @@ class MonteCarlo(object):
 # --- Start the game ---
 board = Board()
 state = board.start()
-mcts = MonteCarlo(board, time=3)  # 1 second per move
+mcts = MonteCarlo(board, time=2)  # 1 second per move
 
 print("Game started!")
 
