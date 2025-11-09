@@ -42,6 +42,67 @@ def calculate_deadwood_points(deck, splice):
     return points
 
 
+# def find_best_meld(deck):
+#     deck_copy = copy.deepcopy(deck)
+#     # deck_copy = deck_copy[:-1]
+
+#     #first, sort deck by first val
+
+#     deck_copy.sort(key=lambda sublist:sublist[0])
+#     # print(f"deck copy sorted by first val is {deck_copy}")
+
+#     deck_copy_first_elems = [sublist[0] for sublist in deck_copy if sublist]
+
+#     first_elem_counts = Counter(deck_copy_first_elems)
+#     # print(first_elem_counts)
+
+#     matches = {}
+#     for key, value in first_elem_counts.items():
+#         if value >= 3:
+#             matches[key] = value
+    
+#     deck_copy_keys = []
+#     match_keys =[]
+#     if not matches:
+#         # print("NO MATCHES")
+#         pass
+#     else:
+#         for i in matches:
+#         # print(matches)
+       
+#             match_keys.append(i)
+#             # print(i)
+#         for i in deck_copy:
+#             deck_copy_keys.append(i[0])
+#         # print(match_keys)
+#         # print(deck_copy_keys)
+#         idx = 0
+#         for i in range(len(deck_copy_keys) -1, -1, -1):
+#             if idx >= i:
+#                 break
+#             if deck_copy_keys[i] in match_keys:
+#                 deck_copy_keys[i], deck_copy_keys[idx] = deck_copy_keys[idx], deck_copy_keys[i]
+        
+#                 idx += 1
+#         # print(deck_copy_keys)
+
+#         # print(deck_copy)
+#     match_deck_copy = sorted(deck_copy, key=lambda x: x[0] in match_keys, reverse=True)
+#     # print(match_deck_copy)
+
+#     #second, sort deck by second val
+#     #   second-b, send to calculate_dw_pts
+#     deck_copy.sort(key=lambda sublist:sublist[1], reverse=True)
+#     # print(f"deck copy sorted by second val is {deck_copy}")
+
+#     #compare two dw pts.
+#     #smaller deadwood -> best meld
+    
+#     if len(match_keys) > 0: splice = sum(first_elem_counts[i] for i in match_keys)
+#     else: splice = 0
+
+#     return [match_deck_copy, splice]
+
 def find_best_meld(deck):
     deck_copy = copy.deepcopy(deck)
     # deck_copy = deck_copy[:-1]
@@ -94,6 +155,59 @@ def find_best_meld(deck):
     #   second-b, send to calculate_dw_pts
     deck_copy.sort(key=lambda sublist:sublist[1], reverse=True)
     # print(f"deck copy sorted by second val is {deck_copy}")
+
+    card_symbols = [sublist[1] for sublist in deck_copy]
+    card_sym_counts = Counter(card_symbols)
+    # print(card_sym_counts)
+    # print(f"Card symbols are {card_symbols}")
+
+    #if second val appears less than 3 times, no run
+        #if second val appears 3 or more times, check if keys decrement by 1
+    repeats = []
+    for item, count in card_sym_counts.items():
+        if count < 3:
+            pass
+        else:
+            repeats.append(item)
+    deck_copy.sort(key=lambda x:(x[1] if x[1] in repeats else '0',int(x[0])), reverse=True)
+    
+    symbol = deck_copy[0][1]
+    number = int(deck_copy[0][0])
+    counter = 1
+    run = []
+    run_idx = []
+    start_of_run = 0
+    for pair in range(1,len(deck_copy)):
+        curr_num = int(deck_copy[pair][0])
+        curr_symbol = deck_copy[pair][1]
+        if curr_symbol == symbol and curr_num == number - 1:  
+            counter += 1
+            if pair == len(deck_copy) - 1 and counter >=3:
+                run_idx = list(range(pair - counter + 1, pair + 1))
+                if run_idx[0] != 0:
+                    run_cards = [deck_copy[j] for j in run_idx]
+                    for j in sorted(run_idx, reverse=True):
+                        deck_copy.pop(j)
+                    deck_copy = run_cards + deck_copy
+            
+        else:
+            if counter >= 3:
+                run.append(list(range(start_of_run, pair)))
+                run_idx = list(range(pair - counter, pair))
+            if run_idx and run_idx[0] != 0:
+                run_cards = [deck_copy[j] for j in run_idx]
+                for j in sorted(run_idx, reverse=True):
+                    deck_copy.pop(j)
+                deck_copy = run_cards + deck_copy
+            symbol = curr_symbol
+            counter = 1         
+            start_of_run = pair
+        number = curr_num   
+    
+    if counter >= 3:
+        run.append(range(start_of_run, len(deck_copy)))
+    
+    #counter shows how long run is
 
     #compare two dw pts.
     #smaller deadwood -> best meld
@@ -276,108 +390,6 @@ class MonteCarlo(object):
     def update(self, state):
         # Takes a game state, and appends it to the history.
         self.states.append(state)
-
-    # def get_play(self):
-    #     # Causes the AI to calculate the best move from the
-    #     # current game state and return it.
-    #     self.max_depth = 0
-    #     state = self.states[-1]
-    #     player = self.board.current_player(state)
-    #     legal = self.board.legal_plays(self.states[:])
-
-    #     # Bail out early if there is no real choice to be made.
-    #     if not legal:
-    #         return
-    #     if len(legal) == 1:
-    #         return legal[0]
-
-    #     games = 0
-    #     begin = datetime.datetime.now(datetime.timezone.utc)
-    #     while datetime.datetime.now(datetime.timezone.utc) - begin < self.calculation_time:
-    #         self.run_simulation()
-    #         games += 1
-
-    #     moves_states = [(p, self.board.next_state(state, p)) for p in legal]
-
-    #     # Display the number of calls of `run_simulation` and the
-    #     # time elapsed.
-    #     # print(games, datetime.datetime.now(datetime.UTC) - begin)
-
-    #     # Pick the move with the highest percentage of wins.
-    #     percent_wins, move = max(
-    #         (self.wins.get(stringify(player, S), 0) / max(1, self.plays.get(stringify(player, S), 1)), p)
-    #         for p, S in moves_states
-    #     )
-
-    #     # Display the stats for each possible play.
-    #     for x in sorted(
-    #         ((100 * self.wins.get(stringify(player, S), 0) /
-    #           max(1, self.plays.get(stringify(player, S), 1)),
-    #           self.wins.get(stringify(player, S), 0),
-    #           max(1, self.plays.get(stringify(player, S), 0)), p)
-    #          for p, S in moves_states),
-    #         reverse=True
-    #     ):
-    #         print("{3}: {0:.2f}% ({1} / {2})".format(*x))
-
-    #     print("Maximum depth searched:", self.max_depth)
-
-    #     return move
-
-    # def run_simulation(self):
-    #     # Plays out a "random" game from the current position,
-    #     # then updates the statistics tables with the result.
-    #     plays, wins = self.plays, self.wins
-
-    #     visited_states = []
-    #     states_copy = self.states[:]
-    #     state = states_copy[-1]
-    #     player = self.board.current_player(state)
-
-    #     expand = True
-    #     for t in range(1, self.max_moves + 1):
-    #         legal = self.board.legal_plays(states_copy)
-    #         moves_states = [(player, self.board.next_state(state, p)) for p in legal]
-    #         # print("move states", moves_states[0])
-
-    #         if all(plays.get(stringify(p, s)) for p,s  in moves_states):
-    #             # If we have stats on all of the legal moves here, use them.
-    #             log_total = log(
-    #                 sum(plays[stringify(player, S)] for p, S in moves_states))
-    #             value, move, state = max(
-    #                 ((wins[stringify(player, S)] / plays[stringify(player, S)]) +
-    #                  self.C * sqrt(log_total / plays[stringify(player, S)]), p, S)
-    #                 for p, S in moves_states
-    #             )
-    #         else:
-    #             # Otherwise, just make an arbitrary decision.
-    #             move, state = random.choice(moves_states)
-
-    #         states_copy.append(state)
-
-    #         # `player` here and below refers to the player
-    #         # who moved into that particular state.
-    #         if expand and stringify(player, state) not in plays:
-    #             expand = False
-    #             plays[stringify(player, state)] = 0
-    #             wins[stringify(player, state)] = 0
-    #             if t > self.max_depth:
-    #                 self.max_depth = t
-
-    #         if [player, state] not in visited_states: visited_states.append([player, state])
-
-    #         player = self.board.current_player(state)
-    #         winner = self.board.winner(states_copy)
-    #         if winner:
-    #             break
-
-    #     for [player, state] in visited_states:
-    #         if stringify(player, state) not in plays:
-    #             continue
-    #         plays[stringify(player, state)] += 1
-    #         if player == winner:
-    #             wins[stringify(player, state)] += 1
-
 
     def get_play(self):
         # Causes the AI to calculate the best move from the
